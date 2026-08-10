@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Procrastomato</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>🍅 Procrastomato</h1>
+    </header>
+
+    <main>
+      <section id="current-section" aria-live="polite"></section>
+
+      <section id="manual-log-section">
+        <button id="toggle-manual-form" class="link-button" type="button">
+          + Log a past session
+        </button>
+        <form id="manual-form" class="card hidden">
+          <h2>Log a past session</h2>
+          <label>
+            Title
+            <input type="text" id="manual-title" required maxlength="120" />
+          </label>
+          <label>
+            Description
+            <textarea id="manual-description" rows="2" maxlength="500"></textarea>
+          </label>
+          <div class="row">
+            <label>
+              Start
+              <input type="datetime-local" id="manual-start" required />
+            </label>
+            <label>
+              End
+              <input type="datetime-local" id="manual-end" required />
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary">Save</button>
+            <button type="button" id="manual-cancel">Cancel</button>
+          </div>
+          <p class="error hidden" id="manual-error"></p>
+        </form>
+      </section>
+
+      <section id="history-section">
+        <h2>History</h2>
+        <ul id="history-list" class="history-list"></ul>
+        <p id="history-empty" class="empty hidden">No sessions yet — start your first pomodoro above.</p>
+      </section>
+
+      <section id="sync-section">
+        <h2>Sync</h2>
+        <div id="sync-content"></div>
+      </section>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
