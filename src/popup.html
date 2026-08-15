@@ -21,7 +21,11 @@
           <h2>Log a past session</h2>
           <label>
             Title
-            <input type="text" id="manual-title" required maxlength="120" />
+            <input type="text" id="manual-title" required maxlength="120" list="title-suggestions" />
+          </label>
+          <label>
+            Category
+            <input type="text" id="manual-category" maxlength="60" list="category-suggestions" placeholder="Optional" />
           </label>
           <label>
             Description
@@ -56,6 +60,9 @@
         <div id="sync-content"></div>
       </section>
     </main>
+
+    <datalist id="title-suggestions"></datalist>
+    <datalist id="category-suggestions"></datalist>
 
     <script type="module" src="popup.js"></script>
   </body>

@@ -10,6 +10,8 @@ import {
   addManualSession,
   updateSessionRecord,
   deleteSessionRecord,
+  getTitleSuggestions,
+  getCategorySuggestions,
 } from "./storage.js";
 import { computeRemainingSeconds, formatMMSS, formatDurationHuman, sessionDurationSeconds } from "./timer.js";
 import {
@@ -44,9 +46,28 @@ async function refreshAndRender() {
 }
 
 function render() {
+  renderDatalists();
   renderCurrentSection();
   renderHistory();
   renderSync();
+}
+
+// Suggestion lists for the title/category combobox inputs (start form and
+// manual log/edit form share the same two <datalist> elements).
+function renderDatalists() {
+  fillDatalist("title-suggestions", getTitleSuggestions(state));
+  fillDatalist("category-suggestions", getCategorySuggestions(state));
+}
+
+function fillDatalist(id, values) {
+  const el = document.getElementById(id);
+  el.innerHTML = values.map((v) => `<option value="${escapeHtml(v)}"></option>`).join("");
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ---------- Current session (start form or active timer) ----------
@@ -64,7 +85,10 @@ function buildStartForm() {
   form.innerHTML = `
     <h2>Start a pomodoro</h2>
     <label>Title
-      <input type="text" id="start-title" required maxlength="120" placeholder="What are you working on?">
+      <input type="text" id="start-title" required maxlength="120" list="title-suggestions" placeholder="What are you working on?">
+    </label>
+    <label>Category
+      <input type="text" id="start-category" maxlength="60" list="category-suggestions" placeholder="Optional">
     </label>
     <label>Description
       <textarea id="start-description" rows="2" maxlength="500" placeholder="Optional details"></textarea>
@@ -82,6 +106,7 @@ function buildStartForm() {
 async function onStartSubmit(e) {
   e.preventDefault();
   const title = document.getElementById("start-title").value.trim();
+  const category = document.getElementById("start-category").value.trim();
   const description = document.getElementById("start-description").value.trim();
   const duration = Number(document.getElementById("start-duration").value);
   const errorEl = document.getElementById("start-error");
@@ -95,7 +120,7 @@ async function onStartSubmit(e) {
   }
 
   try {
-    await startSession({ title, description, plannedDurationMinutes: duration });
+    await startSession({ title, description, category, plannedDurationMinutes: duration });
     await refreshAndRender();
   } catch (err) {
     showError(errorEl, err.message);
@@ -111,6 +136,7 @@ function buildActiveCard(session) {
   card.innerHTML = `
     <span class="status-pill ${isPaused ? "paused" : ""}">${STATUS_LABELS[session.status]}</span>
     <div class="timer-title"></div>
+    <div class="timer-category"></div>
     <div class="timer-description"></div>
     <div class="countdown" id="countdown">${formatMMSS(remaining)}</div>
     <div class="timer-controls">
@@ -125,6 +151,12 @@ function buildActiveCard(session) {
   `;
 
   card.querySelector(".timer-title").textContent = session.title;
+  const categoryEl = card.querySelector(".timer-category");
+  if (session.category) {
+    categoryEl.textContent = session.category;
+  } else {
+    categoryEl.remove();
+  }
   const descEl = card.querySelector(".timer-description");
   if (session.description) {
     descEl.textContent = session.description;
@@ -194,6 +226,7 @@ function resetManualForm() {
 function openEditForm(session) {
   editingId = session.id;
   document.getElementById("manual-title").value = session.title;
+  document.getElementById("manual-category").value = session.category || "";
   document.getElementById("manual-description").value = session.description || "";
   document.getElementById("manual-start").value = toLocalInputValue(session.startTime);
   document.getElementById("manual-end").value = toLocalInputValue(session.endTime);
@@ -205,6 +238,7 @@ function openEditForm(session) {
 async function onManualSubmit(e) {
   e.preventDefault();
   const title = document.getElementById("manual-title").value.trim();
+  const category = document.getElementById("manual-category").value.trim();
   const description = document.getElementById("manual-description").value.trim();
   const startVal = document.getElementById("manual-start").value;
   const endVal = document.getElementById("manual-end").value;
@@ -223,6 +257,7 @@ async function onManualSubmit(e) {
   if (editingId) {
     await updateSessionRecord(editingId, {
       title,
+      category,
       description,
       startTime: start.toISOString(),
       endTime: end.toISOString(),
@@ -231,6 +266,7 @@ async function onManualSubmit(e) {
   } else {
     await addManualSession({
       title,
+      category,
       description,
       startTime: start.toISOString(),
       endTime: end.toISOString(),
@@ -271,6 +307,7 @@ function buildHistoryItem(session) {
       <span class="history-item-title"></span>
       <span class="badge">${STATUS_LABELS[session.status] || session.status}</span>
     </div>
+    <div class="history-item-category"></div>
     <div class="history-item-meta">
       ${formatDurationHuman(sessionDurationSeconds(session))} · ${formatDateTime(session.startTime)}${
     session.endTime ? " – " + formatDateTime(session.endTime) : ""
@@ -284,6 +321,12 @@ function buildHistoryItem(session) {
   `;
 
   li.querySelector(".history-item-title").textContent = session.title;
+  const categoryEl = li.querySelector(".history-item-category");
+  if (session.category) {
+    categoryEl.textContent = session.category;
+  } else {
+    categoryEl.remove();
+  }
   const descEl = li.querySelector(".history-item-description");
   if (session.description) {
     descEl.textContent = session.description;

@@ -46,7 +46,30 @@ export function getActiveSession(state) {
   return state.sessions.find((s) => s.id === state.activeSessionId) || null;
 }
 
-export async function startSession({ title, description, plannedDurationMinutes }) {
+// Unique past values for a session field, most-recently-created first (the
+// sessions array is newest-first already), for populating suggestion lists.
+function fieldSuggestions(state, field) {
+  const seen = new Set();
+  const values = [];
+  for (const session of state.sessions) {
+    if (session.deletedAt) continue;
+    const value = session[field];
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+  return values;
+}
+
+export function getTitleSuggestions(state) {
+  return fieldSuggestions(state, "title");
+}
+
+export function getCategorySuggestions(state) {
+  return fieldSuggestions(state, "category");
+}
+
+export async function startSession({ title, description, category, plannedDurationMinutes }) {
   const state = await getState();
   if (state.activeSessionId) {
     throw new Error("A session is already in progress.");
@@ -55,6 +78,7 @@ export async function startSession({ title, description, plannedDurationMinutes 
     id: generateId(),
     title: title.trim(),
     description: (description || "").trim(),
+    category: (category || "").trim(),
     plannedDurationMinutes,
     status: "active",
     startTime: new Date().toISOString(),
@@ -139,12 +163,13 @@ export async function checkAndCompleteActiveSession(notify) {
   return state;
 }
 
-export async function addManualSession({ title, description, startTime, endTime }) {
+export async function addManualSession({ title, description, category, startTime, endTime }) {
   const state = await getState();
   const session = {
     id: generateId(),
     title: title.trim(),
     description: (description || "").trim(),
+    category: (category || "").trim(),
     plannedDurationMinutes: Math.round((new Date(endTime) - new Date(startTime)) / 60000),
     status: "manual",
     startTime: new Date(startTime).toISOString(),

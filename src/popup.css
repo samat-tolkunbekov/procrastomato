@@ -165,6 +165,17 @@ button.danger {
   word-break: break-word;
 }
 
+.timer-category {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
 .timer-description {
   color: var(--text-muted);
   font-size: 12px;
@@ -249,6 +260,17 @@ button.danger {
   color: var(--text-muted);
   font-size: 11px;
   margin-top: 2px;
+}
+
+.history-item-category {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
 }
 
 .history-item-description {
