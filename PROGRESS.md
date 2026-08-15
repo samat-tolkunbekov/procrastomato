@@ -3,6 +3,81 @@
 See `CLAUDE.md` for architecture/data-model reference — this file is just the
 running "what's done, what's next" log, most recent entry first.
 
+## 2026-08-15 — Port to WXT + Vue 3 + TypeScript + Pinia + Tailwind + Chart.js
+
+Ported the whole extension from plain JS/HTML/CSS (no build step) to the
+stack specified in `Prompt.md`: WXT, Vue 3 (`<script setup>`/Composition
+API), TypeScript (strict), Pinia, Tailwind, Chart.js/vue-chartjs, and
+Vitest. Per the plan agreed with the user (see the three decisions below),
+this was a genuine architecture change, not just a lift-and-shift.
+
+Decisions made with the user before starting:
+- **Adopted Prompt.md's auto-cycling focus/short-break/long-break phase
+  model**, replacing the old single-duration/pause-resume session model.
+  `lib/timer/engine.ts`'s pure reducers (`start`/`pause`/`resume`/`skip`/
+  `completePhase`/`adjustDuration`) generalize the old `storage.js`
+  mutators onto a `TimerState` shaped like Prompt.md's spec
+  (`phase`/`phaseStartedAt`/`phaseDuration`/`isPaused`/`pausedElapsed`),
+  plus `nextPhaseType()` for the short-break-vs-long-break cycling that
+  Prompt.md didn't fully specify (long break every `longBreakInterval`
+  focus sessions, configurable, default 4).
+- **Dropped the multi-device sync feature** (`src/sync.js`,
+  `ulquiorra/BACKEND_SPEC.md`) — out of scope for this port.
+  `ulquiorra/BACKEND_SPEC.md` is left untouched but now describes a
+  contract nothing in the extension talks to.
+- **Kept "Procrastomato" branding** rather than Prompt.md's "Pomodoro
+  Metrics" name.
+- **One deliberate deviation from Prompt.md's literal `Session` type**:
+  added optional `title`/`note` fields beyond `tag`, to preserve the
+  original app's "what are you working on" / manual-log-and-edit UX that
+  Prompt.md's spec (written for a from-scratch app) didn't otherwise have
+  a place for.
+
+What moved where (business logic preserved, not rewritten from scratch):
+`src/timer.js`'s derive functions -> `lib/timer/engine.ts`; `storage.js`'s
+session mutators -> `lib/timer/engine.ts` reducers + `lib/messaging/router.ts`
+(now background-mediated instead of called directly from the popup, since
+Prompt.md requires the background to own timer state exclusively);
+`addManualSession`/`updateSessionRecord`/`deleteSessionRecord`/suggestion
+lists -> `lib/storage/logs.ts` (still called directly from
+`stores/metrics.ts`, same as before, since log CRUD has no concurrent-writer
+race the way live timer state does); `background.js`'s badge/alarm/
+notification logic -> `lib/timer/alarms.ts`, same 1-minute-alarm-granularity
+design.
+
+New: `lib/metrics/aggregate.ts` (daily/weekly totals, streaks, completion
+rate, daily-goal progress — all pure, tested), the dashboard (options page:
+`FocusChart.vue` bar chart, `StreakCard.vue`, `SessionHistoryTable.vue`,
+`SettingsPanel.vue`), and a typed `lib/messaging/` contract between
+background and UI (previously the popup called `storage.js` directly and
+relied on `chrome.storage.onChanged` alone).
+
+**Verified:** `npm run test` (29 Vitest tests across `timer-engine`,
+`metrics-aggregate`, `storage-logs` — the storage tests use a small
+in-memory `chrome.storage.local` fake via `vi.stubGlobal`), `npm run
+compile` (`vue-tsc --noEmit`, strict, clean), `npm run build` for both
+`chrome-mv3` and `firefox-mv2` targets (clean, correct manifest —
+`options_ui.page` pointing at the built `dashboard.html`, icons copied from
+`public/icons/`).
+
+**Not verified:** actually loading either unpacked build in a browser and
+clicking through the flows (start a focus phase -> pause/resume -> auto
+phase-transition -> notification -> badge -> short/long break cycling ->
+manual log -> edit/delete -> settings) — no browser-automation tooling is
+set up in this environment. This is the same limitation logged for the
+original build below; next session (human or Claude) should do that
+click-through, on both Chrome and Firefox, before relying on this.
+
+**Not yet done:**
+- `settings.soundEnabled` is stored but not wired to actual audio —
+  `chrome.notifications` has no cross-browser "silent" flag, and real
+  playback from a service worker needs an offscreen document. Noted inline
+  in `lib/timer/alarms.ts`.
+- No automated Vue-component tests (Prompt.md explicitly deferred UI
+  testing — "UI can stay untested initially").
+- The `ulquiorra/` sync backend spec is now stale relative to the
+  extension (sync was dropped) — flag if multi-device sync comes back up.
+
 ## 2026-08-08 — Multi-device sync (extension side)
 
 Built the extension half of cross-device sync, per the design agreed with
