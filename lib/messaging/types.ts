@@ -25,6 +25,9 @@ export interface ResumeCommand {
 export interface SkipCommand {
   type: "skip";
 }
+export interface StopCommand {
+  type: "stop";
+}
 export interface AdjustDurationCommand {
   type: "adjustDuration";
   minutes: number;
@@ -42,6 +45,7 @@ export type TimerCommand =
   | PauseCommand
   | ResumeCommand
   | SkipCommand
+  | StopCommand
   | AdjustDurationCommand
   | UpdateCurrentMetaCommand
   | GetStateCommand;

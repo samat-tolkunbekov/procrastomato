@@ -88,14 +88,29 @@ export async function handleCommand(command: TimerCommand): Promise<TimerCommand
       }
 
       case "skip": {
+        // Allowed from an idle break screen too (the "skip this break, go
+        // straight to focus" button), not just mid-phase — only log a
+        // session if a phase was actually running to skip out of.
         const settings = await getSettings();
+        const state = await getTimerState();
+        if (engine.isRunning(state)) {
+          const session = buildSessionFromState(state, Date.now(), false);
+          await appendLog(session);
+        }
+        const next = engine.skip(state, settings);
+        await setTimerState(next);
+        await broadcastState(next);
+        return { ok: true, state: next };
+      }
+
+      case "stop": {
         const state = await getTimerState();
         if (!engine.isRunning(state)) {
           return { ok: false, error: "Nothing is running." };
         }
         const session = buildSessionFromState(state, Date.now(), false);
         await appendLog(session);
-        const next = engine.skip(state, settings);
+        const next = engine.stop(state);
         await setTimerState(next);
         await broadcastState(next);
         return { ok: true, state: next };

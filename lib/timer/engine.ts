@@ -136,6 +136,20 @@ export function skip(state: TimerState, settings: Settings): TimerState {
   };
 }
 
+// Aborts the current phase for an urgent interruption — unlike skip(),
+// which deliberately moves on to whatever phase comes next, stop() just
+// parks the timer idle on the *same* phase it was running, uncredited, so
+// the user lands back on "start focus" rather than being pushed into a
+// break they didn't ask for.
+export function stop(state: TimerState): TimerState {
+  if (!isRunning(state)) return state;
+  return {
+    ...IDLE_TIMER_STATE,
+    phase: state.phase,
+    focusSessionsCompleted: state.focusSessionsCompleted,
+  };
+}
+
 // Ends the current phase because its time is up, crediting a completed
 // focus session toward the cycle count when applicable, and parks the
 // timer idle on the next phase. Caller logs a Session with completed: true.
