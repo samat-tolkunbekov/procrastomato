@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import AppButton from "@/components/shared/AppButton.vue";
+import PomodoroSettings from "@/components/timer/PomodoroSettings.vue";
 import { useMetricsStore } from "@/stores/metrics";
 import { useTimerStore } from "@/stores/timer";
+import type { PhaseType } from "@/types/session";
 
 const timer = useTimerStore();
 const metrics = useMetricsStore();
@@ -26,8 +28,8 @@ const nextPhaseLabel = computed(() => {
   }
 });
 
-async function handleStart() {
-  await timer.start(timer.state.phase, {
+async function startPhase(phase: PhaseType) {
+  await timer.start(phase, {
     tag: tag.value.trim() || undefined,
     title: title.value.trim() || undefined,
     note: note.value.trim() || undefined,
@@ -37,17 +39,38 @@ async function handleStart() {
   note.value = "";
 }
 
+async function handleStart() {
+  await startPhase(timer.state.phase);
+}
+
+// Break page's extra option to take a long break instead of whatever the
+// auto-cycle computed (short break), without waiting for the Nth focus
+// session — only shown when that's actually a different choice.
+async function handleStartLongBreak() {
+  await startPhase("long-break");
+}
+
 async function handlePauseResume() {
   if (timer.isPaused) await timer.resume();
   else await timer.pause();
 }
 
+// Skip: move on without saving any progress on the current phase.
 async function handleSkip() {
   await timer.skip();
 }
 
-async function handleStop() {
-  await timer.stop();
+// Reset: discard progress on the current phase and go back to idle on the
+// same phase, ready to start fresh.
+async function handleReset() {
+  await timer.reset();
+}
+
+// End: stop the current phase early but save it as completed "as it is",
+// and advance to the next phase (short/long break after focus, focus after
+// a break) — unlike Skip, which throws the progress away.
+async function handleEnd() {
+  await timer.end();
 }
 
 async function applyAdjust() {
@@ -112,13 +135,24 @@ async function decrementDuration() {
             <option v-for="t in metrics.tagSuggestions" :key="t" :value="t" />
           </datalist>
         </div>
+        <PomodoroSettings />
         <AppButton type="submit" variant="primary" class="w-full">{{ nextPhaseLabel }}</AppButton>
       </form>
 
-      <div v-else class="flex gap-2">
-        <AppButton variant="primary" class="flex-1" @click="handleSkip">Skip</AppButton>
-        <AppButton variant="secondary" class="flex-1" @click="handleStart">
-          {{ nextPhaseLabel }}
+      <div v-else class="space-y-2">
+        <div class="flex gap-2">
+          <AppButton variant="primary" class="flex-1" @click="handleSkip">Skip</AppButton>
+          <AppButton variant="secondary" class="flex-1" @click="handleStart">
+            {{ nextPhaseLabel }}
+          </AppButton>
+        </div>
+        <AppButton
+          v-if="timer.state.phase !== 'long-break'"
+          variant="ghost"
+          class="w-full"
+          @click="handleStartLongBreak"
+        >
+          Start long break
         </AppButton>
       </div>
     </template>
@@ -136,15 +170,14 @@ async function decrementDuration() {
         </AppButton>
         <AppButton
           v-if="timer.state.phase === 'focus'"
-          variant="primary"
+          variant="ghost"
           class="flex-1"
-          @click="handleStop"
+          @click="handleReset"
         >
-          Stop
+          Reset
         </AppButton>
-        <AppButton v-else variant="primary" class="flex-1" @click="handleSkip">
-          Skip break
-        </AppButton>
+        <AppButton v-else variant="ghost" class="flex-1" @click="handleSkip">Skip</AppButton>
+        <AppButton variant="primary" class="flex-1" @click="handleEnd">End</AppButton>
       </div>
       <div class="flex items-center gap-2 text-sm">
         <span>Adjust minutes ({{ adjustStepMinutes > 0 ? `±${adjustStepMinutes}` : "" }}):</span>

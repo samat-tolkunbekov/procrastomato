@@ -3,6 +3,64 @@
 See `CLAUDE.md` for architecture/data-model reference — this file is just the
 running "what's done, what's next" log, most recent entry first.
 
+## 2026-08-20 — Reset/End controls, manual long-break start, quick pomodoro settings
+
+Reworked the popup's phase controls per the user's ask:
+
+- **Renamed "Stop" to "Reset"** on the running-focus page (same behavior as
+  before — discards progress, no session logged, parks idle back on the
+  same phase). Renamed throughout the stack for consistency, not just the
+  label: `engine.stop` -> `engine.reset`, the `"stop"` message command ->
+  `"reset"`, `stores/timer.ts`'s `stop()` -> `reset()`.
+- **New "End" button** (focus and break, while running): ends the phase
+  early but logs it as a *completed* session (`completed: true`, using
+  whatever elapsed time there was) and advances to the next phase, same
+  cycling rule as a natural completion. Reuses `engine.completePhase`
+  as-is in `lib/messaging/router.ts`'s new `"end"` case — no new engine
+  reducer needed, since completePhase already doesn't care whether `now`
+  is the planned end or an early one.
+- **Break idle page**: added a "Start long break" button alongside the
+  existing Skip/"Start short break" pair, shown whenever the auto-computed
+  next phase isn't already a long break — lets the user manually take a
+  long break out of cycle. Reuses the existing `start` command with an
+  explicit `phase` argument; `TimerRing`'s label already derives from
+  `state.phase`, so no separate wiring was needed to make the "under the
+  timer" text track whichever break actually got started.
+- **`components/timer/PomodoroSettings.vue`** (new): a collapsed-by-default
+  "Settings" panel on the idle-focus page, expandable on click, with a
+  +/- pomodoro-count control that steps `settings.focusMinutes` in
+  25-minute increments only, plus short-break/long-break length `<select>`
+  dropdowns (both include the currently-saved value as an option even if
+  it's not one of the presets, so selecting doesn't silently change it on
+  render). Writes straight through `stores/metrics.ts`'s existing
+  `saveSettings`, so the choice persists via the same `settings` storage
+  key the dashboard's full `SettingsPanel.vue` already reads/writes — no
+  new storage plumbing.
+
+**Verified:** `npm run test` (31 Vitest tests, `timer-engine.test.ts`
+updated for the `stop`->`reset` rename), `npm run compile` (clean), `npm
+run build` (chrome-mv3, clean). Also did a real browser click-through this
+time (Playwright + Chromium, loading the built `.output/chrome-mv3`
+extension unpacked and driving `popup.html` directly): expanded the
+settings panel, incremented pomodoros to 50 min and confirmed it stuck
+across a Reset and a fresh Start; started/Reset a focus session; started/
+Ended a focus session early and landed on the short-break idle page with
+the new "Start long break" button visible; clicked it and confirmed a real
+15:00 long break started with the "Long break" label updating correctly;
+Skipped a running break back to focus idle; separately confirmed changing
+the short-break length select to 10 min actually changes the started
+break's duration, and that Ending (not skipping) a break saves it and
+returns to focus idle.
+
+**Not yet done:**
+- No automated component-level test for the new `PomodoroSettings.vue` or
+  the router's new `"end"` case (matches the project's existing pattern —
+  only the pure `lib/timer/engine.ts` reducers have Vitest coverage; `end`
+  reuses `completePhase`, which is already tested).
+- Firefox build/click-through wasn't repeated for this change (only
+  chrome-mv3 was driven); nothing in this change touches
+  browser-specific APIs so it should carry over, but it's untested.
+
 ## 2026-08-15 — Port to WXT + Vue 3 + TypeScript + Pinia + Tailwind + Chart.js
 
 Ported the whole extension from plain JS/HTML/CSS (no build step) to the

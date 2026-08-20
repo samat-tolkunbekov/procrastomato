@@ -25,8 +25,11 @@ export interface ResumeCommand {
 export interface SkipCommand {
   type: "skip";
 }
-export interface StopCommand {
-  type: "stop";
+export interface ResetCommand {
+  type: "reset";
+}
+export interface EndCommand {
+  type: "end";
 }
 export interface AdjustDurationCommand {
   type: "adjustDuration";
@@ -45,7 +48,8 @@ export type TimerCommand =
   | PauseCommand
   | ResumeCommand
   | SkipCommand
-  | StopCommand
+  | ResetCommand
+  | EndCommand
   | AdjustDurationCommand
   | UpdateCurrentMetaCommand
   | GetStateCommand;

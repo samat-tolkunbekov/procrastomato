@@ -103,14 +103,31 @@ export async function handleCommand(command: TimerCommand): Promise<TimerCommand
         return { ok: true, state: next };
       }
 
-      case "stop": {
+      case "reset": {
         const state = await getTimerState();
         if (!engine.isRunning(state)) {
           return { ok: false, error: "Nothing is running." };
         }
         const session = buildSessionFromState(state, Date.now(), false);
         await appendLog(session);
-        const next = engine.stop(state);
+        const next = engine.reset(state);
+        await setTimerState(next);
+        await broadcastState(next);
+        return { ok: true, state: next };
+      }
+
+      case "end": {
+        // Manually ends the current phase early, but still credits it as
+        // completed (saved "as it is") and advances to the next phase —
+        // unlike skip(), which discards the phase without saving it.
+        const settings = await getSettings();
+        const state = await getTimerState();
+        if (!engine.isRunning(state)) {
+          return { ok: false, error: "Nothing is running." };
+        }
+        const session = buildSessionFromState(state, Date.now(), true);
+        await appendLog(session);
+        const next = engine.completePhase(state, settings);
         await setTimerState(next);
         await broadcastState(next);
         return { ok: true, state: next };

@@ -10,10 +10,10 @@ import {
   isPhaseDue,
   nextPhaseType,
   pause,
+  reset,
   resume,
   skip,
   start,
-  stop,
 } from "../lib/timer/engine";
 import { DEFAULT_SETTINGS } from "../types/settings";
 import { IDLE_TIMER_STATE } from "../types/timer";
@@ -101,19 +101,19 @@ describe("skip", () => {
   });
 });
 
-describe("stop", () => {
+describe("reset", () => {
   it("aborts the running phase back to idle without advancing to the next phase", () => {
     const settings = { ...DEFAULT_SETTINGS, longBreakInterval: 4 };
     let state = { ...IDLE_TIMER_STATE, focusSessionsCompleted: 3 };
     state = start(state, "focus", settings, T0);
-    state = stop(state);
+    state = reset(state);
     expect(state.phase).toBe("focus"); // stays put, unlike skip which moves on
     expect(state.focusSessionsCompleted).toBe(3);
     expect(state.phaseStartedAt).toBeNull();
   });
 
   it("is a no-op when idle", () => {
-    expect(stop(IDLE_TIMER_STATE)).toEqual(IDLE_TIMER_STATE);
+    expect(reset(IDLE_TIMER_STATE)).toEqual(IDLE_TIMER_STATE);
   });
 });
 

@@ -70,8 +70,11 @@ export const useTimerStore = defineStore("timer", () => {
   async function skip() {
     return applyResult(await sendCommand({ type: "skip" }));
   }
-  async function stop() {
-    return applyResult(await sendCommand({ type: "stop" }));
+  async function reset() {
+    return applyResult(await sendCommand({ type: "reset" }));
+  }
+  async function end() {
+    return applyResult(await sendCommand({ type: "end" }));
   }
   async function adjustDuration(minutes: number) {
     return applyResult(await sendCommand({ type: "adjustDuration", minutes }));
@@ -120,7 +123,8 @@ export const useTimerStore = defineStore("timer", () => {
     pause,
     resume,
     skip,
-    stop,
+    reset,
+    end,
     adjustDuration,
     updateCurrentMeta,
   };
