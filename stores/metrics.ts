@@ -48,18 +48,21 @@ export const useMetricsStore = defineStore("metrics", () => {
 
   async function load(): Promise<void> {
     loading.value = true;
-    const now = Date.now();
-    const [logs, currentSettings, tags, titles] = await Promise.all([
-      getLogsInRange(now - LOOKBACK_DAYS * 24 * 60 * 60 * 1000, now),
-      getSettings(),
-      getTagSuggestions(),
-      getTitleSuggestions(),
-    ]);
-    sessions.value = logs;
-    settings.value = currentSettings;
-    tagSuggestions.value = tags;
-    titleSuggestions.value = titles;
-    loading.value = false;
+    try {
+      const now = Date.now();
+      const [logs, currentSettings, tags, titles] = await Promise.all([
+        getLogsInRange(now - LOOKBACK_DAYS * 24 * 60 * 60 * 1000, now),
+        getSettings(),
+        getTagSuggestions(),
+        getTitleSuggestions(),
+      ]);
+      sessions.value = logs;
+      settings.value = currentSettings;
+      tagSuggestions.value = tags;
+      titleSuggestions.value = titles;
+    } finally {
+      loading.value = false;
+    }
   }
 
   const dailyTotals = computed(() => dailyFocusTotals(sessions.value));

@@ -34,8 +34,13 @@ export const useTimerStore = defineStore("timer", () => {
 
   async function init(): Promise<void> {
     loading.value = true;
-    applyResult(await sendCommand({ type: "getState" }));
-    loading.value = false;
+    try {
+      applyResult(await sendCommand({ type: "getState" }));
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+    } finally {
+      loading.value = false;
+    }
 
     if (!unsubscribe) {
       unsubscribe = onStateUpdate((next) => {
